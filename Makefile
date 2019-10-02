@@ -8,7 +8,7 @@ mulang: var/single-3 var/single-4
 
 var/dir-single-1/var/single-out: FORCE
 	@if [ ! -e var/dir-single-1 ]; then mkdir -p var/dir-single-1; ln -s ../../src var/dir-single-1/src; fi
-	@cd var/dir-single-1; MULANG_SOURCE_DIR=../../src bash ../../src/main.sh single
+	@cd var/dir-single-1; ../../etc/mulang-last single
 
 var/single-1: var/dir-single-1/var/single-out
 	cp -p var/dir-single-1/var/single-out $@
