@@ -32,7 +32,14 @@ if [ ! -e var/.gitignore ]; then
     echo '*' > var/.gitignore
 fi
 
-bash $MULANG_SOURCE_DIR/build-makefile.sh >| var/makefile
+########################################
+# main.sh をチェック
+
+. $MULANG_SOURCE_DIR/check-main.sh
+
+########################################
+
+bash $MULANG_SOURCE_DIR/build-makefile.sh $option >| var/makefile
 
 make --question -f var/makefile $target || make -f var/makefile $target
 

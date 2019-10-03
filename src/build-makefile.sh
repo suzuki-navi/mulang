@@ -4,17 +4,27 @@ set -Ceu
 
 ########################################
 
+option=
+
+while [ "$#" != 0 ]; do
+    case "$1" in
+        --use-hard )
+            option="$option --use-hard"
+            ;;
+        --use-soft )
+            option="$option --use-soft"
+            ;;
+        * )
+            ;;
+    esac
+    shift
+done
+
+########################################
+
 if [ ! -e var ]; then
     mkdir var
     echo "*" > var/.gitignore
-fi
-
-########################################
-# main.sh をチェック
-
-if [ ! -e src/main.sh ]; then
-    echo "not found: src/main.sh" >&2
-    exit 1
 fi
 
 ########################################
@@ -42,7 +52,7 @@ EOF
 
 cat <<EOF
 var/single-out: var/packed-image.sh
-	bash $MULANG_SOURCE_DIR/build-boot.sh single \\\$\$HOME/.xsvutils > \$@.tmp
+	bash $MULANG_SOURCE_DIR/build-boot.sh $option single \\\$\$HOME/.xsvutils > \$@.tmp
 	chmod +x \$@.tmp
 	mv \$@.tmp \$@
 
@@ -50,7 +60,7 @@ var/packed-image.sh: var/single-target-files
 	(cd var/single-target; perl $MULANG_SOURCE_DIR/pack-dir.pl) > var/packed-image.sh
 
 var/devel-out: var/devel-target-files
-	bash $MULANG_SOURCE_DIR/build-boot.sh devel > \$@.tmp
+	bash $MULANG_SOURCE_DIR/build-boot.sh $option devel > \$@.tmp
 	chmod +x \$@.tmp
 	mv \$@.tmp \$@
 

@@ -2,11 +2,30 @@
 
 set -Ceu
 
-boot_type=$1
+boot_type=
+use_hard=
+use_soft=
+tool_parent_dir=
 
-if [ "$boot_type" = "single" ]; then
-    tool_parent_dir=$2
-fi
+while [ "$#" != 0 ]; do
+    case "$1" in
+        --use-hard )
+            use_hard=1
+            ;;
+        --use-soft )
+            use_soft=1
+            ;;
+        * )
+            if [ "$boot_type" = "single" ]; then
+                tool_parent_dir=$1
+            else
+                boot_type=$1
+            fi
+            ;;
+    esac
+    shift
+done
+
 
 if [ "$boot_type" = "single" ]; then
 
@@ -40,6 +59,44 @@ if [ ! -e \$MULANG_SOURCE_DIR ]; then
     exit 1;
 fi
 
+EOF
+
+    finally_rm_target=
+
+    if [ -n "$use_soft" ]; then
+        cat <<\EOF
+if [ -z "$UID" ]; then
+    UID=$(id -u)
+fi
+if [ -d /run/user/$UID ]; then
+    export MULANG_SOFT_WORKING_DIR=$(mktemp -d /run/user/$UID/mulang-XXXXXXXX)
+elif [ -d /dev/shm ]; then
+    export MULANG_SOFT_WORKING_DIR=$(mktemp -d /dev/shm/mulang-XXXXXXXX)
+else
+    export MULANG_SOFT_WORKING_DIR=$(mktemp -d /tmp/mulang-XXXXXXXX)
+fi
+[ -n "$MULANG_SOFT_WORKING_DIR" ] || { echo "Cannot create MULANG_SOFT_WORKING_DIR: $MULANG_SOFT_WORKING_DIR"; exit $?; }
+
+EOF
+        finally_rm_target="$finally_rm_target \"\$MULANG_SOFT_WORKING_DIR\""
+    fi
+    if [ -n "$use_hard" ]; then
+        cat <<\EOF
+export MULANG_HARD_WORKING_DIR=$(mktemp -d /tmp/mulang-hard-XXXXXXXX)
+[ -n "$MULANG_HARD_WORKING_DIR" ] || { echo "Cannot create MULANG_HARD_WORKING_DIR: $MULANG_HARD_WORKING_DIR"; exit $?; }
+
+EOF
+        finally_rm_target="$finally_rm_target \"\$MULANG_HARD_WORKING_DIR\""
+    fi
+
+    if [ -n "$finally_rm_target" ]; then
+        cat <<EOF
+trap "rm -rf $finally_rm_target" EXIT
+
+EOF
+    fi
+
+    cat <<EOF
 exec bash \$MULANG_SOURCE_DIR/main.sh "\$@"
 
 #SOURCE_IMAGE
@@ -56,6 +113,26 @@ elif [ "$boot_type" = "devel" ]; then
 
 export MULANG_SOURCE_DIR=$pwd/var/devel-target
 
+EOF
+
+    if [ -n "$use_hard" ]; then
+        cat <<EOF
+export MULANG_HARD_WORKING_DIR="$pwd/var/devel-hard-working-dir"
+rm -rf \$MULANG_HARD_WORKING_DIR
+mkdir -p \$MULANG_HARD_WORKING_DIR
+
+EOF
+    fi
+    if [ -n "$use_soft" ]; then
+        cat <<EOF
+export MULANG_SOFT_WORKING_DIR="$pwd/var/devel-soft-working-dir"
+rm -rf \$MULANG_SOFT_WORKING_DIR
+mkdir -p \$MULANG_SOFT_WORKING_DIR
+
+EOF
+    fi
+
+    cat <<EOF
 exec bash \$MULANG_SOURCE_DIR/main.sh "\$@"
 
 EOF
